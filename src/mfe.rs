@@ -70,9 +70,10 @@ impl Microfrontend {
 
         let version: Cow<'a, str> = version.into();
 
-        // Absence of version will also be treated as latest
-        if version == "latest" || version == "" {
+        if version == "latest" {
             VersionType::Latest
+        } else if version == "" {
+            VersionType::Current
         } else if COMMIT_SHA1_REGEX.is_match(version.as_ref()) {
             VersionType::CommitHash
         } else if TAG_REGEX.is_match(version.as_ref()){
