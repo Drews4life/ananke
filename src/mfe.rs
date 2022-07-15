@@ -24,7 +24,7 @@ pub struct Microfrontend {
 pub struct Microfrontends(pub Vec<Microfrontend>);
 
 impl Microfrontend {
-    pub fn get_branch(self: &Self) -> String {
+    pub fn get_branch(&self) -> String {
             match self.version_type {
                 VersionType::Latest => "master".to_owned(),
                 VersionType::Tag => format!("tag/{}", self.version),
@@ -51,7 +51,7 @@ impl Microfrontend {
                     curr + branch_name_separator + next
                 }
             });
-        let version = if raw_version == ""  { "current".to_owned() } else { raw_version };
+        let version = if raw_version.is_empty()  { "current".to_owned() } else { raw_version };
         let version_type = Self::get_version_type(&version);
 
         Microfrontend {
@@ -72,7 +72,7 @@ impl Microfrontend {
 
         if version == "latest" {
             VersionType::Latest
-        } else if version == "" {
+        } else if version.is_empty() {
             VersionType::Current
         } else if COMMIT_SHA1_REGEX.is_match(version.as_ref()) {
             VersionType::CommitHash
@@ -98,7 +98,7 @@ impl Microfrontend {
         self.version_type == VersionType::Current
     }
 
-    fn build_repo_url(&self, target_host: &String) -> String {
+    fn build_repo_url(&self, target_host: &str) -> String {
         format!("git@{}:{}/{}.git", target_host, self.project_group, self.project_name)
     }
 }
@@ -110,13 +110,13 @@ impl fmt::Debug for Microfrontend {
 }
 
 impl Microfrontends {
-    pub fn create_fetch_projects_info_tasks(&self, target_host: &String, pull: bool) -> Vec<Box<(dyn Fn() + Send)>>{
+    pub fn create_fetch_projects_info_tasks(&self, target_host: &str, pull: bool) -> Vec<Box<(dyn Fn() + Send)>>{
         self.0
             .iter()
             .map(|mfe| {
                 let repo_url = mfe.build_repo_url(target_host);
                 let project_name = mfe.project_name.clone();
-                let version = mfe.get_branch().to_owned();
+                let version = mfe.get_branch();
                 let was_fetched = get_child_path_from_string(&project_name).exists();
                 let use_current_version = mfe.should_use_current_version();
                 let new_branch = mfe.should_create_new_branch();

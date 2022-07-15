@@ -3,8 +3,8 @@ extern crate rand;
 use std::path::{PathBuf};
 use rand::distributions::{Alphanumeric, DistString};
 
-pub fn get_child_path_from_string(component: &String) -> PathBuf {
-    let raw_path = format!("./{}", component.clone());
+pub fn get_child_path_from_string(component: &str) -> PathBuf {
+    let raw_path = format!("./{}", component);
 
     PathBuf::from(raw_path)
 }

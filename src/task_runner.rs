@@ -6,7 +6,7 @@ use ananke::{get_child_path_from_string, create_branch_name};
 pub struct TaskRunner {}
 
 impl TaskRunner {
-    pub fn git_clone(repo_url: &String) {
+    pub fn git_clone(repo_url: &str) {
         Self::spawn(
             Command::new("git")
                 .arg("clone")
@@ -15,7 +15,7 @@ impl TaskRunner {
         );
     }
 
-    pub fn git_fetch(project_name: &String) {
+    pub fn git_fetch(project_name: &str) {
         let path = get_child_path_from_string(project_name);
 
         Self::spawn(
@@ -24,7 +24,7 @@ impl TaskRunner {
         );
     }
 
-    pub fn git_pull(project_name: &String) {
+    pub fn git_pull(project_name: &str) {
         let path = get_child_path_from_string(project_name);
 
         Self::spawn(
@@ -33,7 +33,7 @@ impl TaskRunner {
         );
     }
 
-    pub fn git_checkout(project_name: &String, requested_branch: &String, new: bool) {
+    pub fn git_checkout(project_name: &str, requested_branch: &str, new: bool) {
         let path = get_child_path_from_string(project_name);
         let current_branch = &Self::spawn_with_output(
             Command::new("git")
@@ -57,7 +57,7 @@ impl TaskRunner {
         }
     }
 
-    pub fn npm_install(project_name: &String) {
+    pub fn npm_install(project_name: &str) {
         let path = get_child_path_from_string(project_name);
 
         Self::spawn(
@@ -66,7 +66,7 @@ impl TaskRunner {
         );
     }
 
-    pub fn npm_run(project_name: &String) {
+    pub fn npm_run(project_name: &str) {
         let path = get_child_path_from_string(project_name);
 
         Self::spawn(
@@ -75,7 +75,7 @@ impl TaskRunner {
         );
     }
 
-    fn does_local_ver_match(requested_branch: &String, current_branch: &String) -> bool {
+    fn does_local_ver_match(requested_branch: &str, current_branch: &str) -> bool {
         requested_branch.eq(current_branch)
     }
 

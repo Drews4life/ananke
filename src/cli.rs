@@ -84,7 +84,7 @@ pub fn parse() -> LinkCliResult {
     let matches = self::initiate().get_matches();
     let arg_matches = matches.subcommand_matches("link").unwrap();
 
-    self::parse_link_command(&arg_matches)
+    self::parse_link_command(arg_matches)
 }
 
 pub fn link_options_adapter(link_result: LinkCliResult) -> (Microfrontends, Configuration) {
