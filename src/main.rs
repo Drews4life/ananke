@@ -2,7 +2,7 @@ extern crate ananke;
 
 use scheduler::Scheduler;
 use tokio;
-use tokio::io::AsyncWriteExt;
+use futures;
 use crate::configuration::Configuration;
 
 mod mfe;
@@ -20,19 +20,16 @@ async fn main() {
         configuration,
     ) = cli::link_options_adapter(cli_options);
 
-    microfrontends
+    let handlers = microfrontends
         .into_iter()
         .map(|microfrontend| {
-            // Temporal workaround
             let config = configuration.clone();
+
             tokio::spawn(async move {
                 println!("Fetching: {:?}", microfrontend);
                 microfrontend.init(&config);
             })
-        })
-        .for_each(|h| {
-            async {
-                h.await.unwrap();
-            };
         });
+
+    futures::future::join_all(handlers).await;
 }

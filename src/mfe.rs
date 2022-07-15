@@ -105,6 +105,7 @@ impl Microfrontend {
     }
 
     fn install_dependencies(&self, force_update_all: bool) {
+        // TODO: Check if it works correctly
         if !get_child_path_from_string(
             &format!("{}/node_modules", &self.project_name)
         ).exists() || force_update_all {
