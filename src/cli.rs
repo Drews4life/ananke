@@ -1,6 +1,6 @@
 use clap::{Arg, value_parser, Command};
 use clap::parser::ArgMatches;
-use crate::mfe::{Microfrontend, Microfrontends};
+use crate::mfe::Microfrontend;
 use crate::configuration::Configuration;
 
 mod options {
@@ -87,17 +87,16 @@ pub fn parse() -> LinkCliResult {
     self::parse_link_command(arg_matches)
 }
 
-pub fn link_options_adapter(link_result: LinkCliResult) -> (Microfrontends, Configuration) {
+pub fn link_options_adapter(link_result: LinkCliResult) -> (Vec<Microfrontend>, Configuration) {
     let configuration = Configuration {
         target_host: link_result.target_host,
         force_update_all: link_result.force_update_all,
         pull: link_result.pull
     };
-    let microfrontends_collection = link_result.microfrontend
+    let microfrontends = link_result.microfrontend
         .iter()
         .map(|mfe| Microfrontend::from_raw_format(mfe.clone()))
         .collect();
-    let mfes = Microfrontends(microfrontends_collection);
 
-    (mfes, configuration)
+    (microfrontends, configuration)
 }

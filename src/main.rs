@@ -1,6 +1,9 @@
 extern crate ananke;
 
 use scheduler::Scheduler;
+use tokio;
+use tokio::io::AsyncWriteExt;
+use crate::configuration::Configuration;
 
 mod mfe;
 mod cli;
@@ -8,7 +11,8 @@ mod task_runner;
 mod scheduler;
 mod configuration;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli_options = cli::parse();
 
     let (
@@ -16,11 +20,19 @@ fn main() {
         configuration,
     ) = cli::link_options_adapter(cli_options);
 
-    microfrontends.log();
-
-    Scheduler::schedule(microfrontends.create_fetch_projects_info_tasks(&configuration.target_host, configuration.pull));
-    Scheduler::schedule(microfrontends.create_install_dependency_tasks(configuration.force_update_all));
-    Scheduler::schedule(microfrontends.create_run_tasks());
-
-    // Error handling & logging
+    microfrontends
+        .into_iter()
+        .map(|microfrontend| {
+            // Temporal workaround
+            let config = configuration.clone();
+            tokio::spawn(async move {
+                println!("Fetching: {:?}", microfrontend);
+                microfrontend.init(&config);
+            })
+        })
+        .for_each(|h| {
+            async {
+                h.await.unwrap();
+            };
+        });
 }
