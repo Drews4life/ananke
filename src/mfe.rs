@@ -4,6 +4,7 @@ use lazy_static::lazy_static;
 use std::fmt;
 use crate::task_runner::TaskRunner;
 use ananke::get_child_path_from_string;
+use crate::configuration::Configuration;
 
 #[derive(Debug, PartialEq)]
 pub enum VersionType {
@@ -21,17 +22,7 @@ pub struct Microfrontend {
     pub version_type: VersionType,
 }
 
-pub struct Microfrontends(pub Vec<Microfrontend>);
-
 impl Microfrontend {
-    pub fn get_branch(&self) -> String {
-            match self.version_type {
-                VersionType::Latest => "master".to_owned(),
-                VersionType::Tag => format!("tag/{}", self.version),
-                _ => self.version.clone(),
-            }
-    }
-
     pub fn from_raw_format(raw: String) -> Self {
         // mfe consist of `group` and `name` separate by forward slash,
         // and `version` separated by `@` (i.e. `betbook/shell@1.4.2`)
@@ -84,6 +75,56 @@ impl Microfrontend {
         }
     }
 
+    pub fn init(&self, config: &Configuration) {
+        self.fetch(&config.target_host, config.pull);
+        self.install_dependencies(config.force_update_all);
+        self.run()
+    }
+
+    fn fetch(&self, target_host: &str, pull: bool) {
+        let repo_url = self.build_repo_url(target_host);
+        let project_name = self.project_name.clone();
+        let version = self.get_branch();
+        let was_fetched = get_child_path_from_string(&project_name).exists();
+        let use_current_version = self.should_use_current_version();
+        let new_branch = self.should_create_new_branch();
+
+        if !was_fetched {
+            TaskRunner::git_clone(&repo_url);
+        }
+
+        TaskRunner::git_fetch(&project_name);
+
+        if pull {
+            TaskRunner::git_pull(&project_name);
+        }
+
+        if !use_current_version {
+            TaskRunner::git_checkout(&project_name, &version, new_branch);
+        }
+    }
+
+    fn install_dependencies(&self, force_update_all: bool) {
+        // TODO: Check if it works correctly
+        if !get_child_path_from_string(
+            &format!("{}/node_modules", &self.project_name)
+        ).exists() || force_update_all {
+            TaskRunner::npm_install(&self.project_name);
+        }
+    }
+
+    fn run(&self) {
+        TaskRunner::npm_run(&self.project_name);
+    }
+
+    fn get_branch(&self) -> String {
+        match self.version_type {
+            VersionType::Latest => "master".to_owned(),
+            VersionType::Tag => format!("tag/{}", self.version),
+            _ => self.version.clone(),
+        }
+    }
+
     fn should_create_new_branch(&self) -> bool {
         match self.version_type {
             VersionType::Current => false,
@@ -108,69 +149,3 @@ impl fmt::Debug for Microfrontend {
         write!(f, "{} {} {} {:?}", self.project_group, self.project_name, self.version, self.version_type)
     }
 }
-
-impl Microfrontends {
-    pub fn create_fetch_projects_info_tasks(&self, target_host: &str, pull: bool) -> Vec<Box<(dyn Fn() + Send)>>{
-        self.0
-            .iter()
-            .map(|mfe| {
-                let repo_url = mfe.build_repo_url(target_host);
-                let project_name = mfe.project_name.clone();
-                let version = mfe.get_branch();
-                let was_fetched = get_child_path_from_string(&project_name).exists();
-                let use_current_version = mfe.should_use_current_version();
-                let new_branch = mfe.should_create_new_branch();
-
-                Box::new(move || {
-                    if !was_fetched {
-                        TaskRunner::git_clone(&repo_url);
-                    }
-
-                    TaskRunner::git_fetch(&project_name);
-
-                    if pull {
-                        TaskRunner::git_pull(&project_name);
-                    }
-
-                    if !use_current_version {
-                        TaskRunner::git_checkout(&project_name, &version, new_branch);
-                    }
-                }) as Box<(dyn Fn() + Send)>
-            }).collect::<Vec<_>>()
-    }
-
-    pub fn create_install_dependency_tasks(&self, force_update_all: bool) -> Vec<Box<(dyn Fn() + Send)>> {
-        self.0
-            .iter()
-            .filter(|mfe|
-                !get_child_path_from_string(
-                &format!("{}/node_modules", &mfe.project_name)
-                ).exists() || force_update_all
-            )
-            .map(|mfe| {
-                let project_name = mfe.project_name.clone();
-
-                Box::new(move || {
-                    TaskRunner::npm_install(&project_name);
-                }) as Box<(dyn Fn() + Send)>
-            }).collect::<Vec<_>>()
-    }
-
-    pub fn create_run_tasks(&self) -> Vec<Box<(dyn Fn() + Send)>> {
-        self.0
-            .iter()
-            .map(|mfe| {
-                let project_name = mfe.project_name.clone();
-
-                Box::new(move || {
-                    TaskRunner::npm_run(&project_name);
-                }) as Box<(dyn Fn() + Send)>
-            }).collect::<Vec<_>>()
-    }
-
-    pub fn log(&self) {
-        println!("Microfrontends to fetch:");
-        self.0.iter().for_each(|mf| println!("{:?}", mf));
-    }
-}
-
